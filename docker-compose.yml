@@ -1,0 +1,41 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: graph-builder-db
+    restart: always
+    environment:
+      POSTGRES_DB: pressmaster_graph
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    container_name: graph-builder-api
+    restart: always
+    environment:
+      NODE_ENV: development
+      PORT: 8000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: pressmaster_graph
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "npm run migration:run && npm run start:prod"
+
+volumes:
+  db_data:
